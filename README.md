@@ -5,6 +5,8 @@ Asked claude to open the html file in the browser by running this command `start
 
 ### Commands
 /help -> see all available shortcuts in generals tab and see commands available in claude code
+/init -> creates a Claude.MD file to create persitent memory of the codebase so that it can review it during each session.
+Something I asked Claude Code to do -> "Update the @CLAUDE.md file to indicate that as you do work you need to commit things to Git and push them to GitHub regularly with clean commit messages so we never lose the status or work that we have done."
 
 ### Modes
 - Ask mode -> The default mode (Terminal will show uestion mark symbol)

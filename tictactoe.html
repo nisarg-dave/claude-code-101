@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0f172a;
+      font-family: 'Outfit', sans-serif;
+      color: #f8fafc;
+    }
+
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, #f43f5e, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .status {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      min-height: 2rem;
+      color: #94a3b8;
+      transition: color 0.3s ease;
+    }
+
+    .status.winner {
+      color: #22c55e;
+      animation: pulse 0.5s ease;
+    }
+
+    .status.draw {
+      color: #f59e0b;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 8px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      background: #1e293b;
+      border: 2px solid #334155;
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 4rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .cell:hover:not(.taken) {
+      background: #334155;
+    }
+
+    .cell.x {
+      color: #f43f5e;
+    }
+
+    .cell.o {
+      color: #3b82f6;
+    }
+
+    .cell.winning {
+      animation: glow 1s ease-in-out infinite;
+      border-color: #22c55e;
+    }
+
+    .cell.placed {
+      animation: pop 0.2s ease;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 10px #22c55e40; }
+      50% { box-shadow: 0 0 25px #22c55e80; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .reset-btn {
+      padding: 0.75rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .reset-btn:hover {
+      background: #818cf8;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tic Tac Toe</h1>
+    <div class="status" id="status">X's turn</div>
+    <div class="grid" id="grid"></div>
+    <button class="reset-btn" id="resetBtn">New Game</button>
+  </div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const status = document.getElementById('status');
+    const resetBtn = document.getElementById('resetBtn');
+
+    let currentPlayer = 'X';
+    let gameActive = true;
+    let board = ['', '', '', '', '', '', '', '', ''];
+
+    const winningCombos = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // cols
+      [0, 4, 8], [2, 4, 6]             // diagonals
+    ];
+
+    function createGrid() {
+      grid.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.index = i;
+        cell.addEventListener('click', handleClick);
+        grid.appendChild(cell);
+      }
+    }
+
+    function handleClick(e) {
+      const index = e.target.dataset.index;
+      if (board[index] || !gameActive) return;
+
+      board[index] = currentPlayer;
+      e.target.textContent = currentPlayer;
+      e.target.classList.add(currentPlayer.toLowerCase(), 'taken', 'placed');
+
+      if (checkWin()) {
+        status.textContent = `${currentPlayer} wins!`;
+        status.className = 'status winner';
+        gameActive = false;
+        return;
+      }
+
+      if (checkDraw()) {
+        status.textContent = "It's a draw!";
+        status.className = 'status draw';
+        gameActive = false;
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      status.textContent = `${currentPlayer}'s turn`;
+    }
+
+    function checkWin() {
+      for (const combo of winningCombos) {
+        const [a, b, c] = combo;
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          highlightWinner(combo);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function highlightWinner(combo) {
+      const cells = grid.children;
+      combo.forEach(i => cells[i].classList.add('winning'));
+    }
+
+    function checkDraw() {
+      return board.every(cell => cell !== '');
+    }
+
+    function resetGame() {
+      currentPlayer = 'X';
+      gameActive = true;
+      board = ['', '', '', '', '', '', '', '', ''];
+      status.textContent = "X's turn";
+      status.className = 'status';
+      createGrid();
+    }
+
+    resetBtn.addEventListener('click', resetGame);
+    createGrid();
+  </script>
+</body>
+</html>

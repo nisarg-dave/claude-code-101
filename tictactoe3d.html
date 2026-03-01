@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Tic Tac Toe</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #0f172a;
+      font-family: 'Outfit', sans-serif;
+      color: #f8fafc;
+      overflow: hidden;
+    }
+
+    .container {
+      text-align: center;
+      padding: 1rem;
+      position: relative;
+      z-index: 10;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #f43f5e, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .status {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      min-height: 2rem;
+      color: #94a3b8;
+      transition: color 0.3s ease;
+    }
+
+    .status.winner {
+      color: #22c55e;
+      animation: pulse 0.5s ease;
+    }
+
+    .status.draw {
+      color: #f59e0b;
+    }
+
+    #gameCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .controls {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .reset-btn {
+      padding: 0.75rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .reset-btn:hover {
+      background: #818cf8;
+      transform: translateY(-2px);
+    }
+
+    .hint {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-top: 0.5rem;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>3D Tic Tac Toe</h1>
+    <div class="status" id="status">X's turn</div>
+    <div class="hint">Drag to rotate • Click cells to play</div>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div class="controls">
+    <button class="reset-btn" id="resetBtn">New Game</button>
+  </div>
+
+  <script>
+    // Game State
+    let currentPlayer = 'X';
+    let gameActive = true;
+    let board = Array(27).fill('');
+    let cells = [];
+    let markers = [];
+
+    // Three.js Setup
+    const canvas = document.getElementById('gameCanvas');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Colors
+    const COLORS = {
+      x: 0xf43f5e,
+      o: 0x3b82f6,
+      cell: 0x1e293b,
+      cellEdge: 0x334155,
+      cellHover: 0x475569,
+      winner: 0x22c55e,
+      highlight: 0x6366f1
+    };
+
+    // Cell size and spacing
+    const CELL_SIZE = 1.8;
+    const SPACING = 2.2;
+    const OFFSET = -SPACING;
+
+    // Create 3x3x3 cells
+    const cellGroup = new THREE.Group();
+    scene.add(cellGroup);
+
+    // Raycaster for click detection
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    // Generate all 49 winning combinations
+    function generateWinningCombos() {
+      const combos = [];
+
+      // Rows (9 per layer, 3 layers) - horizontal in xy plane
+      for (let z = 0; z < 3; z++) {
+        for (let y = 0; y < 3; y++) {
+          combos.push([z * 9 + y * 3, z * 9 + y * 3 + 1, z * 9 + y * 3 + 2]);
+        }
+      }
+
+      // Columns (9 per layer, 3 layers) - vertical in xy plane
+      for (let z = 0; z < 3; z++) {
+        for (let x = 0; x < 3; x++) {
+          combos.push([z * 9 + x, z * 9 + 3 + x, z * 9 + 6 + x]);
+        }
+      }
+
+      // Pillars (depth lines) - 9 lines through all layers
+      for (let y = 0; y < 3; y++) {
+        for (let x = 0; x < 3; x++) {
+          combos.push([y * 3 + x, 9 + y * 3 + x, 18 + y * 3 + x]);
+        }
+      }
+
+      // 2D Diagonals on each layer (6 total)
+      for (let z = 0; z < 3; z++) {
+        const base = z * 9;
+        combos.push([base, base + 4, base + 8]);
+        combos.push([base + 2, base + 4, base + 6]);
+      }
+
+      // 2D Diagonals on each vertical plane (6 total)
+      // xz planes (front-back diagonals)
+      for (let y = 0; y < 3; y++) {
+        combos.push([y * 3, 9 + y * 3 + 1, 18 + y * 3 + 2]);
+        combos.push([y * 3 + 2, 9 + y * 3 + 1, 18 + y * 3]);
+      }
+      // yz planes (left-right diagonals when viewing from side)
+      for (let x = 0; x < 3; x++) {
+        combos.push([x, 9 + x + 3, 18 + x + 6]);
+        combos.push([x + 6, 9 + x + 3, 18 + x]);
+      }
+
+      // Space diagonals (4 total) - corner to opposite corner
+      combos.push([0, 13, 26]);
+      combos.push([2, 13, 24]);
+      combos.push([6, 13, 20]);
+      combos.push([8, 13, 18]);
+
+      return combos;
+    }
+
+    const winningCombos = generateWinningCombos();
+
+    // Create cell geometry
+    function createCell(z, y, x) {
+      const geometry = new THREE.BoxGeometry(CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      const material = new THREE.MeshPhongMaterial({
+        color: COLORS.cell,
+        transparent: true,
+        opacity: 0.7,
+        shininess: 30
+      });
+      const cell = new THREE.Mesh(geometry, material);
+
+      cell.position.set(
+        x * SPACING + OFFSET,
+        y * SPACING + OFFSET,
+        z * SPACING + OFFSET
+      );
+
+      cell.userData = { index: z * 9 + y * 3 + x, originalColor: COLORS.cell };
+      return cell;
+    }
+
+    // Create all cells
+    function createBoard() {
+      cells = [];
+      cellGroup.clear();
+
+      for (let z = 0; z < 3; z++) {
+        for (let y = 0; y < 3; y++) {
+          for (let x = 0; x < 3; x++) {
+            const cell = createCell(z, y, x);
+            cells.push(cell);
+            cellGroup.add(cell);
+          }
+        }
+      }
+    }
+
+    // Add marker (X or O)
+    function addMarker(index, player) {
+      // Remove existing marker if any
+      if (markers[index]) {
+        cellGroup.remove(markers[index]);
+        markers[index].geometry.dispose();
+        markers[index].material.dispose();
+      }
+
+      const cell = cells[index];
+      const color = player === 'X' ? COLORS.x : COLORS.o;
+
+      let marker;
+      if (player === 'X') {
+        // Create X as two crossed bars
+        const group = new THREE.Group();
+        const barGeo = new THREE.SphereGeometry(0.25, 16, 16);
+        const barMat = new THREE.MeshPhongMaterial({ color, shininess: 100 });
+
+        const bar1 = new THREE.Mesh(barGeo, barMat);
+        bar1.scale.set(1, 1, 4);
+        bar1.rotation.x = Math.PI / 2;
+
+        const bar2 = new THREE.Mesh(barGeo, barMat);
+        bar2.scale.set(1, 1, 4);
+        bar2.rotation.x = Math.PI / 2;
+        bar2.rotation.z = Math.PI / 2;
+
+        group.add(bar1, bar2);
+        marker = group;
+      } else {
+        // Create O as a ring/sphere
+        const geometry = new THREE.TorusGeometry(0.5, 0.2, 16, 32);
+        const material = new THREE.MeshPhongMaterial({ color, shininess: 100 });
+        marker = new THREE.Mesh(geometry, material);
+      }
+
+      marker.position.copy(cell.position);
+      marker.userData = { player };
+      markers[index] = marker;
+      cellGroup.add(marker);
+
+      // Animate marker appearance
+      animateMarkerIn(marker);
+    }
+
+    function animateMarkerIn(marker) {
+      const startScale = 0.01;
+      marker.scale.set(startScale, startScale, startScale);
+
+      let progress = 0;
+      const animate = () => {
+        progress += 0.1;
+        if (progress <= 1) {
+          const scale = startScale + (1 - startScale) * easeOutBack(progress);
+          marker.scale.set(scale, scale, scale);
+          requestAnimationFrame(animate);
+        }
+      };
+      animate();
+    }
+
+    function easeOutBack(x) {
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+    }
+
+    // Highlight winning cells
+    function highlightWinner(combo) {
+      combo.forEach(index => {
+        cells[index].material.color.setHex(COLORS.winner);
+        cells[index].material.emissive.setHex(0x22c55e);
+        cells[index].material.emissiveIntensity = 0.3;
+      });
+    }
+
+    // Check for win
+    function checkWin() {
+      for (const combo of winningCombos) {
+        const [a, b, c] = combo;
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          highlightWinner(combo);
+          return { winner: board[a], combo };
+        }
+      }
+      return null;
+    }
+
+    // Check for draw
+    function checkDraw() {
+      return board.every(cell => cell !== '');
+    }
+
+    // Handle cell click
+    function handleClick(event) {
+      if (!gameActive) return;
+
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(cells);
+
+      if (intersects.length > 0) {
+        const cell = intersects[0].object;
+        const index = cell.userData.index;
+
+        if (board[index]) return;
+
+        board[index] = currentPlayer;
+        addMarker(index, currentPlayer);
+
+        const winResult = checkWin();
+        if (winResult) {
+          status.textContent = `${currentPlayer} wins!`;
+          status.className = 'status winner';
+          gameActive = false;
+          return;
+        }
+
+        if (checkDraw()) {
+          status.textContent = "It's a draw!";
+          status.className = 'status draw';
+          gameActive = false;
+          return;
+        }
+
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        status.textContent = `${currentPlayer}'s turn`;
+      }
+    }
+
+    // Mouse hover effect
+    function handleMouseMove(event) {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(cells);
+
+      // Reset all cells
+      cells.forEach(cell => {
+        if (board[cell.userData.index]) return;
+        cell.material.color.setHex(COLORS.cell);
+      });
+
+      // Highlight hovered cell
+      if (intersects.length > 0) {
+        const cell = intersects[0].object;
+        if (!board[cell.userData.index]) {
+          cell.material.color.setHex(COLORS.cellHover);
+        }
+      }
+    }
+
+    // Camera controls
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+    let autoRotate = true;
+    let autoRotateSpeed = 0.003;
+
+    function handleMouseDown(event) {
+      isDragging = true;
+      autoRotate = false;
+      previousMousePosition = { x: event.clientX, y: event.clientY };
+    }
+
+    function handleMouseUp() {
+      isDragging = false;
+      // Resume auto-rotate after 3 seconds of no interaction
+      setTimeout(() => {
+        if (!isDragging) autoRotate = true;
+      }, 3000);
+    }
+
+    function handleMouseDrag(event) {
+      if (!isDragging) return;
+
+      const deltaX = event.clientX - previousMousePosition.x;
+      const deltaY = event.clientY - previousMousePosition.y;
+
+      cellGroup.rotation.y += deltaX * 0.01;
+      cellGroup.rotation.x += deltaY * 0.01;
+
+      previousMousePosition = { x: event.clientX, y: event.clientY };
+    }
+
+    // Touch support
+    function handleTouchStart(event) {
+      if (event.touches.length === 1) {
+        isDragging = true;
+        autoRotate = false;
+        previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+      }
+    }
+
+    function handleTouchEnd() {
+      isDragging = false;
+      setTimeout(() => {
+        if (!isDragging) autoRotate = true;
+      }, 3000);
+    }
+
+    function handleTouchMove(event) {
+      if (!isDragging || event.touches.length !== 1) return;
+
+      const deltaX = event.touches[0].clientX - previousMousePosition.x;
+      const deltaY = event.touches[0].clientY - previousMousePosition.y;
+
+      cellGroup.rotation.y += deltaX * 0.01;
+      cellGroup.rotation.x += deltaY * 0.01;
+
+      previousMousePosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+    }
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(5, 10, 7);
+    scene.add(directionalLight);
+
+    const pointLight = new THREE.PointLight(0x6366f1, 0.5, 50);
+    pointLight.position.set(0, 0, 0);
+    scene.add(pointLight);
+
+    // Camera position
+    camera.position.set(12, 10, 12);
+    camera.lookAt(0, 0, 0);
+
+    // UI Elements
+    const status = document.getElementById('status');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // Reset game
+    function resetGame() {
+      currentPlayer = 'X';
+      gameActive = true;
+      board = Array(27).fill('');
+      status.textContent = "X's turn";
+      status.className = 'status';
+
+      // Remove all markers
+      markers.forEach((marker, index) => {
+        if (marker) {
+          cellGroup.remove(marker);
+          marker.geometry.dispose();
+          marker.material.dispose();
+        }
+      });
+      markers = [];
+
+      // Reset cell colors
+      cells.forEach(cell => {
+        cell.material.color.setHex(COLORS.cell);
+        cell.material.emissive.setHex(0x000000);
+        cell.material.emissiveIntensity = 0;
+      });
+
+      // Reset rotation
+      cellGroup.rotation.set(0.5, 0, 0);
+    }
+
+    // Event listeners
+    canvas.addEventListener('click', handleClick);
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('mouseleave', handleMouseUp);
+    canvas.addEventListener('mousemove', handleMouseDrag);
+
+    canvas.addEventListener('touchstart', handleTouchStart);
+    canvas.addEventListener('touchend', handleTouchEnd);
+    canvas.addEventListener('touchmove', handleTouchMove);
+
+    resetBtn.addEventListener('click', resetGame);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (autoRotate) {
+        cellGroup.rotation.y += autoRotateSpeed;
+      }
+
+      // Subtle floating animation
+      const time = Date.now() * 0.001;
+      cellGroup.position.y = Math.sin(time) * 0.1;
+
+      renderer.render(scene, camera);
+    }
+
+    // Initialize
+    createBoard();
+    cellGroup.rotation.set(0.5, 0, 0); // Initial tilt
+    animate();
+  </script>
+</body>
+</html>

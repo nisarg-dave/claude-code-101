@@ -25,3 +25,15 @@ Press shift + tab to change mode
 
 ### Skills
 - Skills live in the .claude/skills folder and it can include things like your pr review style, design style, commit style etc.
+
+### Other Tips
+- In your Claude.MD, include a build and validation step and then get it to build the app by prompting
+- In an empty input, if you press esc twice, it brings up previous inpouts allowing you to rewind
+- You can add screenshots to the context
+- `/clear` clears the context
+- `/context` gives you current context that claude code is operating own -> shows you all the MCPs etc which are chewing your tokens
+- `/compact` summarises the session
+- `/resume` gives you the old context. Used when you accidentally nuke a session.
+- `/mcp` shows you mcps configured. Does blow up token usage
+- Add a critical rules section -> e.g., "Never do X" but "Always do Y" and give code snippets or get it to add code snippets and get claude to update the rule
+

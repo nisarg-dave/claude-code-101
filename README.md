@@ -37,3 +37,14 @@ Press shift + tab to change mode
 - `/mcp` shows you mcps configured. Does blow up token usage
 - Add a critical rules section -> e.g., "Never do X" but "Always do Y" and give code snippets or get it to add code snippets and get claude to update the rule
 
+### Daily Workflow
+- Start in plan mode and never accept the first answers it gives me
+- Fresh context is best context that's why you start with plan mode to build up the context
+- Persist before ending sessions -> tell it to save to Claude MD
+- Add a todos section to Claude.MD
+- Press escape to interrupt it and don't be afraid to do that
+
+### Composable Framework
+- Skills:
+    Recurring Workflows -> e.g., Fetch hacker news and save summary -> can then save it as a skill
+

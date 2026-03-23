@@ -46,5 +46,15 @@ Press shift + tab to change mode
 
 ### Composable Framework
 - Skills:
-    Recurring Workflows -> e.g., Fetch hacker news and save summary -> can then save it as a skill
+    - Recurring Workflows -> e.g., Fetch hacker news and save summary -> can then save it as a skill
+    - Needs to be in a folder with SKILL.md file
+    - There used to be commands as well but skills are now the recommended approach
+- MCPs:
+    - ask claude to find a good MCP
+- Subagents
+    - Isolated context
+    - Good for things atomic in nature
+    - Skills run reusable prompts in the main conversation
+    - Subagents run in isolated contexts with restricted tools, custom models, and persistent memory
+    - E.g., senior code reviewer
 

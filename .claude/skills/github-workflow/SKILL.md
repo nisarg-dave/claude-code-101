@@ -13,7 +13,8 @@ After completing meaningful work:
 3. Stage specific files (avoid `git add -A`)
 4. Create commit with descriptive message ending with:
    ```
-   Co-Authored-By: minimax-m2.7
+   Co-Authored-By: minimax-m2.7 <noreply@anthropic.com>
+   Or: Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
    ```
 5. Push to GitHub
 

@@ -58,3 +58,13 @@ Press shift + tab to change mode
     - Subagents run in isolated contexts with restricted tools, custom models, and persistent memory
     - E.g., senior code reviewer
 
+### Boris Cherny Workflow
+1. Run 5 claudes in parallel -> create 5 different tabs in iterm, split plane vertically (one pane will be claude code and the other will be bash terminal). Switch between tabs is command + number and to switch between panes it is command + either [ or ]. Enable iterm notifications to get notified when one tab is done.
+2. Use opus with thinking
+3. Share claude.md with your team
+4. Use claude github actions for pr reviews (need anthropic api key)
+5. Use plan mode first
+6. Use slash commands as much as possible and create them for repetable workflows
+7. Create custom subagents (The ones that Boris uses are in the project)
+8. Use a PostToolUse hooks to format code that claude didn't do (added to settings.local.json -> use /hooks)
+9. Use /permissions instead of --dangerously-skip-permissions. To pre-allow common safe commands.
